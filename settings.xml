@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <servers>
+        <server>
+            <id>nexus</id>
+            <username>admin</username>
+            <password>$Can_amanstillbebrav_eif2087$</password>
+        </server>
+    </servers>
+
+
+    <profiles>
+        <profile>
+            <id>env-nuxus</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+
+            <repositories>
+                <repository>
+                    <id>nexus</id>
+                    <name>nexus</name>
+                    <url>http://ec2-18-189-195-104.us-east-2.compute.amazonaws.com:8081/repository/swipdom/</url>
+                    <releases>
+                        <enabled>true</enabled>
+
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+
+                <repository>
+                    <id>spring-milestones</id>
+                    <name>Spring Milestones</name>
+                    <url>https://repo.spring.io/milestone</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+
+
+            </repositories>
+
+
+
+        </profile>
+
+        <profile>
+            <id>env-local</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+
+            </activation>
+
+
+
+            <repositories>
+
+                <repository>
+                    <id>spring-milestones</id>
+                    <name>Spring Milestones</name>
+                    <url>https://repo.spring.io/milestone</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+
+
+                <repository>
+                    <id>central</id>
+                    <name>Central Maven repo</name>
+                    <url>http://central.maven.org/maven2/</url>
+                    <releases>
+                        <enabled>true</enabled>
+
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+
+
+
+        </profile>
+    </profiles>
+
+
+    <activeProfiles>
+        <activeProfile>env-nuxus</activeProfile>
+    </activeProfiles>
+</settings>

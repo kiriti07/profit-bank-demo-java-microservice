@@ -1,0 +1,12 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /home/ec2-user/paychimp
+
+hooks:
+  AfterInstall:
+    - location: scripts/before_install.sh
+      runas: root
+    # - location: scripts/after_install.sh
+    #   runas: root

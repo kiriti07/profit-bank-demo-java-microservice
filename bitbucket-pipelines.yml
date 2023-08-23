@@ -1,0 +1,165 @@
+image: frantzromain/profit-java-spring-dependecies:latest  #  #working build
+clone:
+  depth: full
+pipelines:
+
+  pull-requests:
+    '*':
+      - step:
+          name: Sonarcloud/SonarQube Quality Check
+          caches:
+            - maven
+          script:
+            #- sudo add-apt-repository ppa:openjdk-r/ppa
+            - apt-get update
+            - mvn -s ./settings.xml clean install #-DskipTests
+            #- apt install openjdk-8-jdk -y
+            #- mvn -s ./settings.xml sonar:sonar -DskipTests
+  branches:
+    '{cicd,development}':  #feature/* for when we need feature branches
+      - step:
+            name: Build JAR file and copy to S3
+            size: 2x
+            caches:
+              - maven
+            script:
+              #RUN tests for building to development and then run sonarqube
+              #- mvn test 
+              - apt-get update
+              - apt-get install python3 -y
+              - apt-get install python3-distutils -y
+              - export JAR_NAME=invoicelendingservice.jar
+              - export TAR_FILE=$BITBUCKET_COMMIT.tar
+              - curl -O https://bootstrap.pypa.io/get-pip.py
+              - python3 get-pip.py
+              - pip install awscli
+
+              #- export JAR_EXT=$BITBUCKET_COMMIT
+
+              #Build JAR FILE
+              - export MAVEN_OPTS=-Dmaven.artifact.threads=30 #added jul 20
+              - mvn -s ./settings.xml -T 2C clean install -DskipTests
+
+               #Rename and MV
+              - mv target/invoice-lending-spring-service-latest.jar $JAR_NAME
+
+              #TAR
+              - tar -cf $TAR_FILE $JAR_NAME appspec.yml appinit scripts/
+
+              # COPY to S3
+              - aws s3 cp $TAR_FILE  s3://paychimp-source-jar/dev/invoicelendingservice/
+
+      - step:
+            name: Deploy to Dev
+            #trigger: manual
+            deployment: development
+            script:
+              - apt-get update
+              - apt-get install python3 -y
+              - apt-get install python3-distutils -y
+              - apt-get install jq -y
+              - curl -O https://bootstrap.pypa.io/get-pip.py
+              - export TAR_FILE=$BITBUCKET_COMMIT.tar
+              - python3 get-pip.py
+              - pip install awscli
+
+              - export D_ID=$(aws deploy create-deployment --application-name invoicelendingservice --deployment-config-name CodeDeployDefault.AllAtOnce --deployment-group-name development --region us-east-1 --s3-location bucket=paychimp-source-jar,bundleType=tar,key=dev/invoicelendingservice/$TAR_FILE | jq --raw-output '.deploymentId')
+              - echo $D_ID
+              - aws deploy wait deployment-successful --region us-east-1 --deployment-id $D_ID
+
+
+    '{release/release}':
+      - step:
+            name: Build JAR file and copy to S3
+            caches:
+              - maven
+            script:
+              #RUN tests for building to development and then run sonarqube
+              #- mvn test
+              - apt-get update
+              - apt-get install python3 -y
+              - apt-get install python3-distutils -y
+              - export JAR_NAME=invoicelendingservice.jar
+              - export TAR_FILE=$BITBUCKET_COMMIT.tar
+              - curl -O https://bootstrap.pypa.io/get-pip.py
+              - python3 get-pip.py
+              - pip install awscli
+
+              #- export JAR_EXT=$BITBUCKET_COMMIT
+
+              #Build JAR FILE
+              - mvn -s ./settings.xml clean install #-DskipTests
+
+               #Rename and MV
+              - mv target/invoice-lending-spring-service-latest.jar $JAR_NAME
+
+              #TAR
+              - tar -cf $TAR_FILE $JAR_NAME appspec.yml appinit scripts/
+
+              # COPY to S3
+              - aws s3 cp $TAR_FILE  s3://paychimp-source-jar/staging/invoicelendingservice/
+
+      - step:
+            name: Deploy to Staging
+            #trigger: manual
+            deployment: staging
+            script:
+              - apt-get update
+              - apt-get install python3 -y
+              - apt-get install python3-distutils -y
+              - apt-get install jq -y
+              - curl -O https://bootstrap.pypa.io/get-pip.py
+              - export TAR_FILE=$BITBUCKET_COMMIT.tar
+              - python3 get-pip.py
+              - pip install awscli
+
+              - export D_ID=$(aws deploy create-deployment --application-name invoicelendingservice --deployment-config-name CodeDeployDefault.AllAtOnce --deployment-group-name staging --region us-east-1 --s3-location bucket=paychimp-source-jar,bundleType=tar,key=staging/invoicelendingservice/$TAR_FILE | jq --raw-output '.deploymentId')
+              - echo $D_ID
+              - aws deploy wait deployment-successful --region us-east-1 --deployment-id $D_ID
+
+    '{master}':
+      - step:
+            name: Build JAR file and copy to S3 Prod
+            caches:
+              - maven
+            script:
+              - apt-get update
+              - apt-get install python3 -y
+              - apt-get install python3-distutils -y
+              - export JAR_NAME=invoicelendingservice.jar
+              - export TAR_FILE=$BITBUCKET_COMMIT.tar
+              - curl -O https://bootstrap.pypa.io/get-pip.py
+              - python3 get-pip.py
+              - pip install awscli
+
+              #- export JAR_EXT=$BITBUCKET_COMMIT
+
+              #Build JAR FILE
+              - mvn -s ./settings.xml  clean install #-DskipTests
+              - mvn -s ./settings.xml sonar:sonar -DskipTests
+              #Rename and MV
+              - mv target/invoice-lending-spring-service-latest.jar $JAR_NAME
+
+              #TAR
+              - tar -cf $TAR_FILE $JAR_NAME appspec.yml appinit scripts/
+
+              # COPY to S3
+              - aws s3 cp $TAR_FILE  s3://paychimp-source-jar/prod/invoicelendingservice/
+
+
+      - step:
+            name: Deploy to Prod
+            trigger: manual
+            deployment: production
+            script:
+              - apt-get update
+              - apt-get install python3 -y
+              - apt-get install python3-distutils -y
+              - apt-get install jq -y
+              - curl -O https://bootstrap.pypa.io/get-pip.py
+              - export TAR_FILE=$BITBUCKET_COMMIT.tar
+              - python3 get-pip.py
+              - pip install awscli
+              - export D_ID=$(aws deploy create-deployment --application-name invoicelendingservice --deployment-config-name CodeDeployDefault.AllAtOnce --region us-east-1 --deployment-group-name production --s3-location bucket=paychimp-source-jar,bundleType=tar,key=prod/invoicelendingservice/$TAR_FILE | jq --raw-output '.deploymentId')
+              - echo $D_ID
+              - aws deploy wait deployment-successful --region us-east-1 --deployment-id $D_ID
